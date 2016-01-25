@@ -14,6 +14,7 @@ String window_name = "Chessboard";
 
 void detectAndDisplay( Mat frame , float *distance);
 void drawImage(Mat frame, vector<Point2f> corners, vector<Point2d> imgpts);
+void getEulerAngles(Mat &rotCamerMatrix,Vec3d &eulerAngles);
 
 class ImageConverter
 {
@@ -75,8 +76,6 @@ void detectAndDisplay( Mat frame , float *distance)
   Size boardSize(9,6);
   vector<Point2f> corners;
 
-  FileStorage fs( "cameraSettings.yml", FileStorage::READ );
-
 	Mat rvec = Mat(Size(3,1), CV_64FC1);
 	Mat tvec = Mat(Size(3,1), CV_64FC1);
 
@@ -85,13 +84,11 @@ void detectAndDisplay( Mat frame , float *distance)
   vector<Point3d> boardPoints;
   vector<Point3d> framePoints;
   Mat intrinsics, distortion;
-  fs["Camera_Matrix"] >> intrinsics;
-  fs["Distortion_Coefficients"] >> distortion;
-  for (int i=0; i<9; i++)
+  for (int i=0; i<6; i++)
 	{
-		for (int j=0; j<6; j++)
+		for (int j=8; j>=0; j--)
 		{
-			boardPoints.push_back( Point3d( double(i), double(j), 0.0) );
+			boardPoints.push_back( Point3d( double(j), double(i), 0.0) );
 		}
 	}
 
@@ -114,20 +111,24 @@ void detectAndDisplay( Mat frame , float *distance)
     for(int i = 0; i < boardPoints.size(); i++){
       printf("Board Point: %f, %f \n", boardPoints[i].x, boardPoints[i].y);
     }*/
-    /*
-    Mat intrinsics = Mat::eye(3, 3, CV_32F); // dummy camera matrix
+    intrinsics = Mat::eye(3, 3, CV_32F); // dummy camera matrix
     intrinsics.at<float>(0,0) = 400;
     intrinsics.at<float>(1,1) = 400;
     intrinsics.at<float>(0,2) = 640 / 2;
-    intrinsics.at<float>(1,2) =  480 / 2; */
+    intrinsics.at<float>(1,2) =  480 / 2;
 
     distortion = Mat::zeros(4,1, CV_64FC1);
 
 
     Size imageSize(frame.rows, frame.cols);
     //calibrateCamera(Mat(boardPoints), Mat(corners), frame.size(),  intrinsics, distortion, rvec, tvec);
-    solvePnP( Mat(boardPoints), Mat(corners), intrinsics, distortion, rvec, tvec, false );
+    solvePnP( Mat(boardPoints), Mat(corners), intrinsics, distortion, rvec, tvec, false, CV_ITERATIVE);
     projectPoints(framePoints, rvec, tvec, intrinsics, distortion, imageFramePoints );
+    Rodrigues(rvec, rvec);
+    Vec3d eulerAngles;
+    getEulerAngles(rvec, eulerAngles);
+    cout << "Roll:" << eulerAngles[2] << "Pitch" << eulerAngles[0] << "Yaw:" << eulerAngles[1] << endl;
+    drawImage(frame, corners, imageFramePoints);
 
     for(int i = 0; i< imageFramePoints.size(); i++){
       printf("Point: %f,%f\n", imageFramePoints[i].x, imageFramePoints[i].y);
@@ -140,24 +141,14 @@ void detectAndDisplay( Mat frame , float *distance)
          << tvec.at<double>(1,0) << ", "
          << tvec.at<double>(2,0) << "]" << endl;
 
-
-    //Mat tvec2 = -np.matrix(rotation_matrix).T * np.matrix(tvecs_new)
-    Mat map1, map2;
-
-    initUndistortRectifyMap(intrinsics, distortion, Mat(), intrinsics, frame.size(), CV_32FC1, map1, map2);
-    Mat undist;
-    remap(frame, undist, map1, map2, INTER_LINEAR);
-    frame = undist;
-
     double dist = tvec.at<double>(0,0)*tvec.at<double>(0,0)+tvec.at<double>(1,0)*tvec.at<double>(1,0)+tvec.at<double>(2,0)*tvec.at<double>(2,0);
-    dist = sqrt(dist);
+    dist = sqrt(dist)*1.371;
     char value[100];
-    sprintf(value, "Distance: %f", dist*7*0.125);
+    sprintf(value, "Distance: %f", dist);
 
     putText(frame, value, cvPoint(30,30),
             FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(200,200,250), 1, CV_AA);
 
-    drawImage(frame, corners, imageFramePoints);
 
 
 
@@ -175,4 +166,22 @@ void drawImage(Mat frame, vector<Point2f> corners, vector<Point2d> imgpts){
   line(frame, corner, imgpts[1], CV_RGB(255,0,0), 5);
   line(frame, corner, imgpts[2], CV_RGB(0,255,0), 5);
   line(frame, corner, imgpts[3], CV_RGB(0,0,255), 5);
+}
+
+void getEulerAngles(Mat &rotCamerMatrix,Vec3d &eulerAngles){
+
+    Mat cameraMatrix,rotMatrix,transVect,rotMatrixX,rotMatrixY,rotMatrixZ;
+    double* _r = rotCamerMatrix.ptr<double>();
+    double projMatrix[12] = {_r[0],_r[1],_r[2],0,
+                          _r[3],_r[4],_r[5],0,
+                          _r[6],_r[7],_r[8],0};
+
+    decomposeProjectionMatrix( Mat(3,4,CV_64FC1,projMatrix),
+                               cameraMatrix,
+                               rotMatrix,
+                               transVect,
+                               rotMatrixX,
+                               rotMatrixY,
+                               rotMatrixZ,
+                               eulerAngles);
 }
