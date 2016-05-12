@@ -19,6 +19,8 @@
 
 ros::NodeHandle nh;
 
+unsigned long count;
+
 unsigned int oldEncoderValues[8];
 unsigned long oldTime;
 std_msgs::UInt16MultiArray encPos;
@@ -49,26 +51,21 @@ void setup() {
   }
   
   nh.initNode();
-  nh.advertise(encoderPos);
   
-  encPos.layout.dim = (std_msgs::MultiArrayDimension *) malloc(sizeof(std_msgs::MultiArrayDimension) * 2);
-  encPos.layout.dim_length = 1;
-  encPos.layout.dim[0].label = "Label";
-  encPos.layout.dim[0].size = 8;
-  encPos.layout.dim[0].stride = 1*8;
-  encPos.layout.data_offset = 0;
+  nh.advertise(encoderPos);
+  nh.advertise(encoderSpeed);
+  
+  encPos.data_length = 8;
   encPos.data = (uint16_t *)malloc(sizeof(uint16_t)*8);
   
-  encSpeed.layout.dim = (std_msgs::MultiArrayDimension *) malloc(sizeof(std_msgs::MultiArrayDimension) * 2);
-  encSpeed.layout.dim_length = 1;
-  encSpeed.layout.dim[0].label = "Label";
-  encSpeed.layout.dim[0].size = 8;
-  encSpeed.layout.dim[0].stride = 1*8;
-  encSpeed.layout.data_offset = 0;
+ 
+  
+  encSpeed.data_length = 8;
   encSpeed.data = (float *)malloc(sizeof(float)*8);
   
-  //nh.advertise(encoderSpeed);
-  //nh.subscribe(sub);
+  
+  
+  nh.subscribe(sub);
 }
 
 
@@ -81,16 +78,27 @@ void runAllMotors(unsigned short values[8]){
 
 void loop() {
   for(int i = 0; i < 8; i++){
-    //encPos.data[i] = map(analogRead(encoderPins[i]), 0, 1024, 0, 360);
-    //encSpeed.data[i] = 1000 * (float)(analogRead(encoderPins[i]) - oldEncoderValues[i]) / (millis() - oldTime);
-    oldEncoderValues[i] = analogRead(encoderPins[i]);
+    encPos.data[i] = map(analogRead(encoderPins[i]), 0, 522, 0, 360);
+    float denc = ((float)encPos.data[i] - (float)oldEncoderValues[i]);
+    
+    if(encPos.data[i] < 90 && oldEncoderValues[i] > 270){
+      denc += 360;
+    }
+    
+    if(encPos.data[i] > 270 && oldEncoderValues[i] < 90){
+      denc -= 360;
+    }
+    
+    
+    encSpeed.data[i] = 1000.0 * denc / (float)(millis() - oldTime);
+    oldEncoderValues[i] = encPos.data[i];
   }
-  encPos.data_length = 8;
-  encSpeed.data_length = 8;
+ 
   oldTime = millis();
-  
-  encoderPos.publish( &encPos);
-  //encoderSpeed.publish(&encSpeed);
+  if((++count) % 100 == 0){
+    encoderPos.publish( &encPos);
+    encoderSpeed.publish(&encSpeed);
+  }
   nh.spinOnce();  
-  delay(100);
+  delay(10);
 }
