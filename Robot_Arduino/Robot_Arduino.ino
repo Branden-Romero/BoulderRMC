@@ -95,7 +95,7 @@ void loop() {
   }
  
   oldTime = millis();
-  if((++count) % 100 == 0){
+  if((++count) % 10 == 0){
     encoderPos.publish( &encPos);
     encoderSpeed.publish(&encSpeed);
   }
