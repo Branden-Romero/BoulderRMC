@@ -13,34 +13,34 @@ ros::Publisher motor_cmd_pub;
 void press(const sensor_msgs::Joy::ConstPtr& msg)
 {	
 	int8_t cmd[8];
-	cmd[0] = MIDVAL;
+	cmd[0] = -128;
 	if (msg->buttons[4] != 0.0)
 		cmd[1] = MIDVAL - 0.4 * RANGE;
 	else if (msg->axes[2] != 1.0)
-		cmd[1] = MIDVAL + (1.0-msg->axes[2]) * RANGE;
+		cmd[1] = MIDVAL + (2.0-(msg->axes[2]+1))/2.0 * RANGE;
 	else
 		cmd[1] = MIDVAL; 
-	cmd[2] = MIDVAL;
+	cmd[2] = -128;
 	if (msg->buttons[5] != 0.0)
 		cmd[3] = MIDVAL - 0.4 * RANGE;
 	else if (msg->axes[5] != 1.0)
-		cmd[3] = MIDVAL + (1.0-msg->axes[2]) * RANGE;
+		cmd[3] = MIDVAL + (2.0-(msg->axes[5]+1))/2.0 * RANGE;
 	else
 		cmd[3] = MIDVAL; 
 	if (msg->buttons[2] != 0.0)
 		cmd[4] = MIDVAL - 0.4 * RANGE;
-	else if (msg->buttons[3] != 1.0)
+	else if (msg->buttons[3] != 0.0)
 		cmd[4] = MIDVAL + 0.4 * RANGE;
 	else
 		cmd[4] = MIDVAL; 
-	cmd[5] = MIDVAL;
-	if (msg->buttons[7] == 1.0)
+	cmd[5] = -128;
+	if (msg->axes[7] == 1.0)
 		cmd[6] = MIDVAL - 0.4 * RANGE;
 	else if (msg->axes[7] == -1.0)
 		cmd[6] = MIDVAL + 0.4 * RANGE;
 	else
 		cmd[6] = MIDVAL; 
-	cmd[7] = MIDVAL;
+	cmd[7] = -128;
 	std_msgs::Int8MultiArray cmd2;
 	std::vector<int8_t> v(cmd, cmd + sizeof cmd / sizeof cmd[0]);
 	cmd2.data = v;
@@ -52,12 +52,12 @@ void drive(const geometry_msgs::Twist& msg)
 	double left = (msg.linear.x + msg.angular.z);
 	double right = -(msg.linear.x - msg.angular.z);
 	cmd[0] = right*RANGE + MIDVAL;
-	cmd[1] = MIDVAL;
+	cmd[1] = -128;
 	cmd[2] = left*RANGE + MIDVAL;;
-	cmd[3] = MIDVAL;
-	cmd[4] = MIDVAL;
+	cmd[3] = -128;
+	cmd[4] = -128;
 	cmd[5] = right*RANGE + MIDVAL;
-	cmd[6] = MIDVAL;
+	cmd[6] = -128;
 	cmd[7] = left*RANGE + MIDVAL;
 	std_msgs::Int8MultiArray cmd2;
 	std::vector<int8_t> v(cmd, cmd + sizeof cmd / sizeof cmd[0]);

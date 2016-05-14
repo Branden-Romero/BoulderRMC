@@ -1,6 +1,6 @@
 #define midvalue 187
 
-#define range 20
+#define range 40
 #define dataBufferPin 42
 #define LED1 30
 #define LED2 31
