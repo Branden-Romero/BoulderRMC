@@ -31,8 +31,6 @@ int main(int argc, char** argv)
 	double z = 0.0;
 	double theta = 0.0;
 	
-	bool start = 1;
-	
 	ros::Time current_time, last_time;
 	current_time = ros::Time::now();
 	last_time = ros::Time::now();
